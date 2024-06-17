@@ -1,4 +1,4 @@
-# Project klipx-server
+# klipx-server
 
 One Paragraph of project description goes here
 
@@ -21,16 +21,6 @@ make build
 run the application
 ```bash
 make run
-```
-
-Create DB container
-```bash
-make docker-run
-```
-
-Shutdown DB container
-```bash
-make docker-down
 ```
 
 live reload the application

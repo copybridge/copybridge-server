@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"klipx-server/internal/clipboard"
 	"log"
 	"os"
 	"strconv"
@@ -18,6 +19,14 @@ type Service interface {
 	// Health returns a map of health status information.
 	// The keys and values in the map are service-specific.
 	Health() map[string]string
+
+	Insert(c *clipboard.Clipboard) error
+
+	Select(name string) (*clipboard.Clipboard, error)
+
+	Update(c *clipboard.Clipboard) error
+
+	Delete(name string) error
 
 	// Close terminates the database connection.
 	// It returns an error if the connection cannot be closed.
@@ -43,6 +52,20 @@ func New() Service {
 	if err != nil {
 		// This will not be a connection error, but a DSN parse error or
 		// another initialization error.
+		log.Fatal(err)
+	}
+
+	// create a table if it doesn't exist
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS clipboards (
+		name TEXT PRIMARY KEY,
+		type TEXT NOT NULL,
+		data TEXT NOT NULL,
+		is_encrypted BOOLEAN NOT NULL DEFAULT FALSE,
+		password_hash TEXT,
+		salt TEXT,
+		nonce TEXT
+	);`)
+	if err != nil {
 		log.Fatal(err)
 	}
 
@@ -110,4 +133,20 @@ func (s *service) Health() map[string]string {
 func (s *service) Close() error {
 	log.Printf("Disconnected from database: %s", dburl)
 	return s.db.Close()
+}
+
+func (s *service) Insert(c *clipboard.Clipboard) error {
+	return nil
+}
+
+func (s *service) Select(name string) (*clipboard.Clipboard, error) {
+	return nil, nil
+}
+
+func (s *service) Update(c *clipboard.Clipboard) error {
+	return nil
+}
+
+func (s *service) Delete(name string) error {
+	return nil
 }
