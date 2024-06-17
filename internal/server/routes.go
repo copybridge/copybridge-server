@@ -46,7 +46,7 @@ func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Server) GetHandler(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
-	c, err := s.db.Select(name)
+	c, err := s.db.Get(name)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -86,7 +86,7 @@ func (s *Server) PostHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("Received clipboard: %+v", cNew)
 
-	c, err := s.db.Select(cNew.Name)
+	c, err := s.db.Get(cNew.Name)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -94,6 +94,7 @@ func (s *Server) PostHandler(w http.ResponseWriter, r *http.Request) {
 
 	if c != nil {
 		http.Error(w, "clipboard already exists", http.StatusConflict)
+		return
 	}
 
 	if cNew.IsEncrypted {
@@ -124,7 +125,7 @@ func (s *Server) PostHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Server) PutHandler(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
-	c, err := s.db.Select(name)
+	c, err := s.db.Get(name)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -140,6 +141,8 @@ func (s *Server) PutHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	c.DataType = cNew.DataType
+	c.Data = cNew.Data
 
 	log.Printf("Received clipboard: %+v", cNew)
 
@@ -153,8 +156,6 @@ func (s *Server) PutHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
-		c.DataType = cNew.DataType
-		c.Data = cNew.Data
 		c.Encrypt(password)
 	}
 
@@ -172,7 +173,7 @@ func (s *Server) PutHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Server) DeleteHandler(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
-	c, err := s.db.Select(name)
+	c, err := s.db.Get(name)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

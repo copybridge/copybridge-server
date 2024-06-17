@@ -22,7 +22,7 @@ type Service interface {
 
 	Insert(c *clipboard.Clipboard) error
 
-	Select(name string) (*clipboard.Clipboard, error)
+	Get(name string) (*clipboard.Clipboard, error)
 
 	Update(c *clipboard.Clipboard) error
 
@@ -135,18 +135,57 @@ func (s *service) Close() error {
 	return s.db.Close()
 }
 
+// Insert inserts a new clipboard into the database.
 func (s *service) Insert(c *clipboard.Clipboard) error {
-	return nil
+	sqlInsert := `INSERT INTO clipboards (name, type, data) VALUES (?, ?, ?);`
+	sqlInsertEncrypted := `INSERT INTO clipboards (name, type, data, is_encrypted, password_hash, salt, nonce) VALUES (?, ?, ?, ?, ?, ?, ?);`
+
+	var err error
+	if c.IsEncrypted {
+		_, err = s.db.Exec(sqlInsertEncrypted, c.Name, c.DataType, c.Data, c.IsEncrypted, c.PasswordHash, c.Salt, c.Nonce)
+	} else {
+		_, err = s.db.Exec(sqlInsert, c.Name, c.DataType, c.Data)
+	}
+
+	return err
 }
 
-func (s *service) Select(name string) (*clipboard.Clipboard, error) {
-	return nil, nil
+// Get retrieves a clipboard from the database by its name.
+func (s *service) Get(name string) (*clipboard.Clipboard, error) {
+	sqlSelect := `SELECT * FROM clipboards WHERE name = ?;`
+
+	var c clipboard.Clipboard
+	var passwordHash, salt, nonce sql.NullString
+	err := s.db.QueryRow(sqlSelect, name).
+		Scan(&c.Name, &c.DataType, &c.Data, &c.IsEncrypted, &passwordHash, &salt, &nonce)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	if c.IsEncrypted {
+		c.PasswordHash = passwordHash.String
+		c.Salt = salt.String
+		c.Nonce = nonce.String
+	}
+
+	return &c, nil
 }
 
+// Update updates an existing clipboard in the database.
 func (s *service) Update(c *clipboard.Clipboard) error {
-	return nil
+	sqlUpdate := `UPDATE clipboards SET type = ?, data = ?, is_encrypted = ?, password_hash = ?, salt = ?, nonce = ? WHERE name = ?;`
+
+	_, err := s.db.Exec(sqlUpdate, c.DataType, c.Data, c.IsEncrypted, c.PasswordHash, c.Salt, c.Nonce, c.Name)
+	return err
 }
 
+// Delete deletes a clipboard from the database by its name.
 func (s *service) Delete(name string) error {
-	return nil
+	sqlDelete := `DELETE FROM clipboards WHERE name = ?;`
+
+	_, err := s.db.Exec(sqlDelete, name)
+	return err
 }
