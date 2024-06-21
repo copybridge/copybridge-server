@@ -20,12 +20,21 @@ type Service interface {
 	// The keys and values in the map are service-specific.
 	Health() map[string]string
 
+	// Insert inserts a new clipboard into the database.
+	// It returns an error if the insertion fails.
 	Insert(c *clipboard.Clipboard) error
 
+	// Get retrieves a clipboard from the database by its name.
+	// It returns nil if the clipboard does not exist.
+	// It returns an error if the retrieval fails.
 	Get(name string) (*clipboard.Clipboard, error)
 
+	// Update updates an existing clipboard in the database.
+	// It returns an error if the update fails.
 	Update(c *clipboard.Clipboard) error
 
+	// Delete deletes a clipboard from the database by its name.
+	// It returns an error if the deletion fails.
 	Delete(name string) error
 
 	// Close terminates the database connection.
@@ -136,6 +145,10 @@ func (s *service) Close() error {
 }
 
 // Insert inserts a new clipboard into the database.
+// If the clipboard is encrypted, it inserts the encrypted data along with the password hash, salt, and nonce.
+// If the clipboard is not encrypted, it inserts the data as is.
+// If the insertion is successful, it returns nil.
+// If an error occurs during insertion, it returns the error.
 func (s *service) Insert(c *clipboard.Clipboard) error {
 	sqlInsert := `INSERT INTO clipboards (name, type, data) VALUES (?, ?, ?);`
 	sqlInsertEncrypted := `INSERT INTO clipboards (name, type, data, is_encrypted, password_hash, salt, nonce) VALUES (?, ?, ?, ?, ?, ?, ?);`
@@ -151,6 +164,10 @@ func (s *service) Insert(c *clipboard.Clipboard) error {
 }
 
 // Get retrieves a clipboard from the database by its name.
+// If the clipboard is encrypted, it retrieves the encrypted data along with the password hash, salt, and nonce.
+// If the clipboard is not encrypted, it retrieves the data as is.
+// If the clipboard does not exist, it returns nil.
+// If an error occurs during retrieval, it returns the error.
 func (s *service) Get(name string) (*clipboard.Clipboard, error) {
 	sqlSelect := `SELECT * FROM clipboards WHERE name = ?;`
 
@@ -175,6 +192,7 @@ func (s *service) Get(name string) (*clipboard.Clipboard, error) {
 }
 
 // Update updates an existing clipboard in the database.
+// If
 func (s *service) Update(c *clipboard.Clipboard) error {
 	sqlUpdate := `UPDATE clipboards SET type = ?, data = ?, is_encrypted = ?, password_hash = ?, salt = ?, nonce = ? WHERE name = ?;`
 
