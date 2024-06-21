@@ -4,11 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"klipx-server/internal/clipboard"
 	"log"
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/copybridge/copybridge-server/internal/clipboard"
 
 	_ "github.com/joho/godotenv/autoload"
 	_ "github.com/mattn/go-sqlite3"

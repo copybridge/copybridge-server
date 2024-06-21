@@ -1,4 +1,4 @@
-module klipx-server
+module github.com/copybridge/copybridge-server
 
 go 1.22.4
 

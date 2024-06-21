@@ -2,9 +2,10 @@ package server
 
 import (
 	"encoding/json"
-	"klipx-server/internal/clipboard"
 	"log"
 	"net/http"
+
+	"github.com/copybridge/copybridge-server/internal/clipboard"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"

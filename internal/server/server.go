@@ -9,7 +9,7 @@ import (
 
 	_ "github.com/joho/godotenv/autoload"
 
-	"klipx-server/internal/database"
+	"github.com/copybridge/copybridge-server/internal/database"
 )
 
 type Server struct {

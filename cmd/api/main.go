@@ -2,7 +2,8 @@ package main
 
 import (
 	"fmt"
-	"klipx-server/internal/server"
+
+	"github.com/copybridge/copybridge-server/internal/server"
 )
 
 func main() {

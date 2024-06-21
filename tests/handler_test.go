@@ -2,13 +2,14 @@ package tests
 
 import (
 	"io"
-	"klipx-server/internal/server"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/copybridge/copybridge-server/internal/server"
 )
 
-func TestHandler(t *testing.T) {
+func TestHelloWorldHandler(t *testing.T) {
 	s := &server.Server{}
 	server := httptest.NewServer(http.HandlerFunc(s.HelloWorldHandler))
 	defer server.Close()
