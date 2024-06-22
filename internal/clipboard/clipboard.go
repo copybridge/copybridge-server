@@ -1,6 +1,7 @@
 package clipboard
 
 type Clipboard struct {
+	Id           int    `json:"id"`
 	Name         string `json:"name"`
 	DataType     string `json:"type"`
 	Data         string `json:"data"`

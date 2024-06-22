@@ -25,18 +25,18 @@ type Service interface {
 	// It returns an error if the insertion fails.
 	Insert(c *clipboard.Clipboard) error
 
-	// Get retrieves a clipboard from the database by its name.
+	// Get retrieves a clipboard from the database by its id.
 	// It returns nil if the clipboard does not exist.
 	// It returns an error if the retrieval fails.
-	Get(name string) (*clipboard.Clipboard, error)
+	Get(id int) (*clipboard.Clipboard, error)
 
 	// Update updates an existing clipboard in the database.
 	// It returns an error if the update fails.
 	Update(c *clipboard.Clipboard) error
 
-	// Delete deletes a clipboard from the database by its name.
+	// Delete deletes a clipboard from the database by its id.
 	// It returns an error if the deletion fails.
-	Delete(name string) error
+	Delete(id int) error
 
 	// Close terminates the database connection.
 	// It returns an error if the connection cannot be closed.
@@ -65,18 +65,40 @@ func New() Service {
 		log.Fatal(err)
 	}
 
-	// create a table if it doesn't exist
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS clipboards (
-		name TEXT PRIMARY KEY,
-		type TEXT NOT NULL,
-		data TEXT NOT NULL,
-		is_encrypted BOOLEAN NOT NULL DEFAULT FALSE,
-		password_hash TEXT,
-		salt TEXT,
-		nonce TEXT
-	);`)
+	// Check if table exists
+	rows, err := db.Query("SELECT name FROM sqlite_master WHERE type='table' AND name='clipboards';")
 	if err != nil {
 		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	// If table does not exist, create it
+	if !rows.Next() {
+		_, err = db.Exec(`CREATE TABLE clipboards (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL,
+			type TEXT NOT NULL,
+			data TEXT NOT NULL,
+			is_encrypted BOOLEAN NOT NULL DEFAULT FALSE,
+			password_hash TEXT,
+			salt TEXT,
+			nonce TEXT
+		);`)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// Insert a row with id 99999
+		_, err = db.Exec(`INSERT INTO clipboards (id, name, type, data) VALUES (?, ?, ?, ?);`, 99999, "example", "text/plain", "Hello, World!")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// Delete the row with id 99999
+		_, err = db.Exec(`DELETE FROM clipboards WHERE id = ?;`, 99999)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	dbInstance = &service{
@@ -154,28 +176,38 @@ func (s *service) Insert(c *clipboard.Clipboard) error {
 	sqlInsert := `INSERT INTO clipboards (name, type, data) VALUES (?, ?, ?);`
 	sqlInsertEncrypted := `INSERT INTO clipboards (name, type, data, is_encrypted, password_hash, salt, nonce) VALUES (?, ?, ?, ?, ?, ?, ?);`
 
+	var result sql.Result
 	var err error
 	if c.IsEncrypted {
-		_, err = s.db.Exec(sqlInsertEncrypted, c.Name, c.DataType, c.Data, c.IsEncrypted, c.PasswordHash, c.Salt, c.Nonce)
+		result, err = s.db.Exec(sqlInsertEncrypted, c.Name, c.DataType, c.Data, c.IsEncrypted, c.PasswordHash, c.Salt, c.Nonce)
 	} else {
-		_, err = s.db.Exec(sqlInsert, c.Name, c.DataType, c.Data)
+		result, err = s.db.Exec(sqlInsert, c.Name, c.DataType, c.Data)
+	}
+	if err != nil {
+		return err
 	}
 
-	return err
+	id, err := result.LastInsertId()
+	if err != nil {
+		return err
+	}
+	c.Id = int(id)
+
+	return nil
 }
 
-// Get retrieves a clipboard from the database by its name.
+// Get retrieves a clipboard from the database by its id.
 // If the clipboard is encrypted, it retrieves the encrypted data along with the password hash, salt, and nonce.
 // If the clipboard is not encrypted, it retrieves the data as is.
 // If the clipboard does not exist, it returns nil.
 // If an error occurs during retrieval, it returns the error.
-func (s *service) Get(name string) (*clipboard.Clipboard, error) {
-	sqlSelect := `SELECT * FROM clipboards WHERE name = ?;`
+func (s *service) Get(id int) (*clipboard.Clipboard, error) {
+	sqlSelect := `SELECT * FROM clipboards WHERE id = ?;`
 
 	var c clipboard.Clipboard
 	var passwordHash, salt, nonce sql.NullString
-	err := s.db.QueryRow(sqlSelect, name).
-		Scan(&c.Name, &c.DataType, &c.Data, &c.IsEncrypted, &passwordHash, &salt, &nonce)
+	err := s.db.QueryRow(sqlSelect, id).
+		Scan(&c.Id, &c.Name, &c.DataType, &c.Data, &c.IsEncrypted, &passwordHash, &salt, &nonce)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -195,16 +227,16 @@ func (s *service) Get(name string) (*clipboard.Clipboard, error) {
 // Update updates an existing clipboard in the database.
 // If
 func (s *service) Update(c *clipboard.Clipboard) error {
-	sqlUpdate := `UPDATE clipboards SET type = ?, data = ?, is_encrypted = ?, password_hash = ?, salt = ?, nonce = ? WHERE name = ?;`
+	sqlUpdate := `UPDATE clipboards SET name = ?, type = ?, data = ? WHERE id = ?;`
 
-	_, err := s.db.Exec(sqlUpdate, c.DataType, c.Data, c.IsEncrypted, c.PasswordHash, c.Salt, c.Nonce, c.Name)
+	_, err := s.db.Exec(sqlUpdate, c.Name, c.DataType, c.Data, c.Id)
 	return err
 }
 
-// Delete deletes a clipboard from the database by its name.
-func (s *service) Delete(name string) error {
-	sqlDelete := `DELETE FROM clipboards WHERE name = ?;`
+// Delete deletes a clipboard from the database by its id.
+func (s *service) Delete(id int) error {
+	sqlDelete := `DELETE FROM clipboards WHERE id = ?;`
 
-	_, err := s.db.Exec(sqlDelete, name)
+	_, err := s.db.Exec(sqlDelete, id)
 	return err
 }
