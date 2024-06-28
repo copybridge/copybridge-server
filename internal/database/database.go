@@ -227,9 +227,9 @@ func (s *service) Get(id int) (*clipboard.Clipboard, error) {
 // Update updates an existing clipboard in the database.
 // If
 func (s *service) Update(c *clipboard.Clipboard) error {
-	sqlUpdate := `UPDATE clipboards SET name = ?, type = ?, data = ? WHERE id = ?;`
+	sqlUpdate := `UPDATE clipboards SET name = ?, type = ?, data = ?, nonce = ? WHERE id = ?;`
 
-	_, err := s.db.Exec(sqlUpdate, c.Name, c.DataType, c.Data, c.Id)
+	_, err := s.db.Exec(sqlUpdate, c.Name, c.DataType, c.Data, c.Nonce, c.Id)
 	return err
 }
 
